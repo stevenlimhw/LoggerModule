@@ -1,6 +1,6 @@
 namespace TradingEngineServer.Logging
 {
-    abstract class AbstractLogger : ILogger
+    public abstract class AbstractLogger : ILogger
     {
         protected abstract void Log(LogLevel loglevel, string module, string message);
         public void Debug(string module, string message) => Log(LogLevel.Debug, module, message);
