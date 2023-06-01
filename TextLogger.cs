@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace TradingEngineServer.Logging.LoggingConfiguration;
+namespace TradingEngineServer.Logging.LoggingConfiguration
 {
     public class TextLogger : AbstractLogger, ITextLogger
     {
