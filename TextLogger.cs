@@ -9,6 +9,14 @@ namespace TradingEngineServer.Logging.LoggingConfiguration
         public TextLogger(IOptions<LoggerConfiguration> loggingConfiguration) : base()
         {
             _loggingConfiguration = loggingConfiguration.Value ?? throw new ArgumentNullException(nameof(loggingConfiguration));
+            if (_loggingConfiguration.LoggerType != LoggerType.Text)
+                throw new InvalidOperationException($"{nameof(TextLogger)} doesn't match LoggerType of {_loggingConfiguration.LoggerType}");
+            
+            var now = DateTime.Now;
+            string logDirectory = Path.Combine(_loggingConfiguration.TextLoggerConfiguration.Directory, $"{now:yyyy-MM-dd}");
+            string baseLogName = Path.Combine(_loggingConfiguration.TextLoggerConfiguration.Filename, _loggingConfiguration.TextLoggerConfiguration.FileExtension);
+            string filepath = Path.Combine(logDirectory, baseLogName);
+            _ = Task.Run(() => LogAsync(filepath, _logQueue, _tokenSource.Token));
         }
 
         private static async Task LogAsync(string filepath, BufferBlock<LogInformation> logQueue, CancellationToken token)
@@ -32,12 +40,31 @@ namespace TradingEngineServer.Logging.LoggingConfiguration
 
         private static string FormatLogItem(LogInformation logItem)
         {
-            throw new NotImplementedException();
+            return $"[{logItem.Now:yyyy-MM-dd HH-mm-ss.fffffff}] [{logItem.ThreadName,-30}{logItem.ThreadId:000}]" +
+                $"[{logItem.LogLevel}] {logItem.Message}";
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            lock(_lock)
+
+            if (_disposed)
+                return;
+            _disposed = true;
+
+            if (disposing)
+            {
+                _tokenSource.Cancel();
+                _tokenSource.Dispose();
+            }
+
+
         }
 
         protected override void Log(LogLevel loglevel, string module, string message)
@@ -46,6 +73,14 @@ namespace TradingEngineServer.Logging.LoggingConfiguration
                 DateTime.Now, Thread.CurrentThread.ManagedThreadId, Thread.CurrentThread.Name));
         }
 
+        ~TextLogger()
+        {
+            Dispose(false);
+        }
+
         private readonly BufferBlock<LogInformation> _logQueue = new BufferBlock<LogInformation>();
+        private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
+        private readonly object _lock = new Object();
+        private bool _disposed = false;
     }
 }
